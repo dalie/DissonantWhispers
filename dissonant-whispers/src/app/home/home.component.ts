@@ -22,7 +22,7 @@ export class HomeComponent implements OnInit {
     this.sessions = this._sessionsService.getSessions();
   }
 
-  hostSession() {
+  hostNewSession() {
     this._router.navigate(['/host', { session: this.hostSessionInput.value, server: this.serverSessionInput.value }]);
   }
 

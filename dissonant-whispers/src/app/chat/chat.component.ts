@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, AfterViewInit, ElementRef } from '@angular/core';
 import { RtcService } from '../rtc.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-chat',
@@ -10,20 +11,20 @@ export class ChatComponent implements OnInit, AfterViewInit {
   @ViewChild('localVideoElement')
   localVideoElement: ElementRef<HTMLVideoElement>;
 
-  remoteMediaTracks: MediaStreamTrack[] = [];
+  remoteStreams: MediaStream[];
 
   constructor(private _rtcService: RtcService) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this._rtcService.remoteStreams.subscribe(remoteStreams => {
+      this.remoteStreams = remoteStreams;
+    });
+  }
 
   ngAfterViewInit() {
     this.localVideoElement.nativeElement.volume = 0;
     this._rtcService.localStream.subscribe(stream => {
       this.localVideoElement.nativeElement.srcObject = stream;
-    });
-
-    this._rtcService.remoteMeadiTracks.subscribe(tracks => {
-      this.remoteMediaTracks = tracks;
     });
   }
 }

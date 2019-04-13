@@ -55,6 +55,9 @@ export class HostComponent implements OnInit {
     connection.on('call', mediaConnection => {
       console.log('received call, answering with stream');
       mediaConnection.answer(this._localStream);
+      mediaConnection.on('stream', stream => {
+        this._rtcService.addRemoteStream(stream);
+      });
     });
   }
 }

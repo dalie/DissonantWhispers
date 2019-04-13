@@ -8,26 +8,23 @@ import * as Peer from 'peerjs';
   providedIn: 'root'
 })
 export class RtcService {
-  private _localStream: MediaStream;
-  private _localPeerConnection: RTCPeerConnection;
-  private _remoteTracks: MediaStreamTrack[] = [];
+  private _remoteStreams: MediaStream[] = [];
 
   localStream = new Subject<MediaStream>();
-  remoteMeadiTracks = new Subject<MediaStreamTrack[]>();
+  remoteStreams = new Subject<MediaStream[]>();
 
   constructor() {}
-
-  start(player: Player, session: Session) {
-    const peer = new Peer(player.id, {
-      host: session.server
-    });
-
-    const connection = peer.connect('dom');
-  }
 
   getUserMedia() {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(mediaStream => {
       this.localStream.next(mediaStream);
     });
+  }
+
+  addRemoteStream(stream) {
+    if (this._remoteStreams.indexOf(stream) < 0) {
+      this._remoteStreams.push(stream);
+      this.remoteStreams.next(this._remoteStreams);
+    }
   }
 }

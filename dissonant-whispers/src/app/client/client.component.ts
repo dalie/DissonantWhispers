@@ -35,8 +35,10 @@ export class ClientComponent implements OnInit {
 
     this._rtcService.localStream.subscribe(stream => {
       const mediaConn = connection.call(`host_${this.session.name}`, stream);
-      mediaConn.on('stream', () => {
+      mediaConn.on('stream', stream => {
+        console.log(stream);
         console.log('received stream');
+        this._rtcService.addRemoteStream(stream);
       });
     });
     this._rtcService.getUserMedia();

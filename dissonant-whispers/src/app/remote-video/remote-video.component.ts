@@ -7,7 +7,7 @@ import { Component, OnInit, Input, AfterViewInit, ViewChild, ElementRef } from '
 })
 export class RemoteVideoComponent implements OnInit, AfterViewInit {
   @Input()
-  mediaTrack: MediaStreamTrack;
+  mediaStream: MediaStream;
 
   @ViewChild('remoteVideoElement')
   remoteVideoElement: ElementRef<HTMLVideoElement>;
@@ -17,6 +17,6 @@ export class RemoteVideoComponent implements OnInit, AfterViewInit {
   ngOnInit() {}
 
   ngAfterViewInit() {
-    // this.remoteVideoElement.nativeElement.srcObject = this.mediaTrack.;
+    this.remoteVideoElement.nativeElement.srcObject = this.mediaStream;
   }
 }
