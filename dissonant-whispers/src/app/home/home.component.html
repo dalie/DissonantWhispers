@@ -1,0 +1,49 @@
+<div class="content">
+  <div>
+    <button mat-raised-button
+            color="primary"
+            *ngFor="let session of sessions"
+            (click)="hostExistingSession(session)">{{session}}</button>
+  </div>
+  <mat-form-field>
+    <input matInput
+           [formControl]="hostSessionInput"
+           [matAutocomplete]="sessionsAutoComplete"
+           placeholder="Session Name">
+    <mat-autocomplete #sessionsAutoComplete="matAutocomplete">
+      <mat-option *ngFor="let session of sessions"
+                  [value]="session">
+        {{session}}
+      </mat-option>
+    </mat-autocomplete>
+
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput
+           [formControl]="serverSessionInput"
+           [matAutocomplete]="serverSessionsAutoComplete"
+           placeholder="Server URL">
+    <mat-autocomplete #serverSessionsAutoComplete="matAutocomplete">
+      <mat-option *ngFor="let server of servers"
+                  [value]="server">
+        {{server}}
+      </mat-option>
+    </mat-autocomplete>
+
+  </mat-form-field>
+
+  <button mat-raised-button
+          matSuffix
+          (click)="hostNewSession()"
+          color="primary">Host</button>
+  <mat-form-field>
+    <input matInput
+           [formControl]="joinSessionInput"
+           placeholder="Session ID">
+  </mat-form-field>
+  <button mat-raised-button
+          matSuffix
+          (click)="joinSession"
+          color="primary">Join</button>
+
+</div>

@@ -1,0 +1,6 @@
+<video #localVideoElement
+       class="localVideo"
+       autoplay
+       playsinline></video>
+<app-remote-video *ngFor="let track of remoteMediaTracks"
+                  [mediaTrack]="track"></app-remote-video>
