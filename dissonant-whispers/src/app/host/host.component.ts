@@ -1,16 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { SessionsService } from '../sessions.service';
 import { Session } from '../Session';
 import { RtcService } from '../rtc.service';
-declare var Peer: any;
+
 @Component({
   selector: 'app-host',
   templateUrl: './host.component.html',
   styleUrls: ['./host.component.css']
 })
-export class HostComponent implements OnInit {
-  private _localStream: MediaStream;
+export class HostComponent implements OnInit, OnDestroy {
   session: Session;
 
   constructor(
@@ -19,45 +18,17 @@ export class HostComponent implements OnInit {
     private _rtcService: RtcService
   ) {}
 
+  ngOnDestroy() {
+    this._rtcService.destroy();
+  }
+
   ngOnInit() {
     this.session = this._sessionsService.getSession(
       this._route.snapshot.params.session,
       this._route.snapshot.params.server
     );
     this._rtcService.getUserMedia();
-    this._rtcService.localStream.subscribe(stream => {
-      this._localStream = stream;
-    });
 
-    const connection = new Peer(`host_${this.session.name}`, {
-      host: this.session.server,
-      key: 'peerjs',
-      path: 'myapp',
-      port: 9000
-    });
-
-    connection.on('error', e => {
-      console.log(e);
-    });
-
-    connection.on('open', () => {
-      console.log('Connected to peer server, waiting for clients to join.');
-    });
-
-    connection.on('connection', dataConnection => {
-      console.log('user connected');
-      console.log(dataConnection);
-      setTimeout(() => {
-        dataConnection.send('hello');
-      }, 2000);
-    });
-
-    connection.on('call', mediaConnection => {
-      console.log('received call, answering with stream');
-      mediaConnection.answer(this._localStream);
-      mediaConnection.on('stream', stream => {
-        this._rtcService.addRemoteStream(stream);
-      });
-    });
+    this._rtcService.hostSession(this.session);
   }
 }
