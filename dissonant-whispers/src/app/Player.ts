@@ -7,5 +7,6 @@ interface ChatEntry {
 export interface Player {
   id: string;
   name: string;
+  mediaStream: MediaStream;
   chatLog: ChatEntry[];
 }

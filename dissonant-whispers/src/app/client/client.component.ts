@@ -27,7 +27,9 @@ export class ClientComponent implements OnInit, OnDestroy {
     );
 
     this._rtcService.localStream.subscribe(() => {
-      this._rtcService.joinSession(this.session);
+      setTimeout(() => {
+        this._rtcService.joinSession(this.session);
+      }, 1000);
     });
 
     this._rtcService.getUserMedia();
