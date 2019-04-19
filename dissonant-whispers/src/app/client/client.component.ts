@@ -28,7 +28,7 @@ export class ClientComponent implements OnInit, OnDestroy {
 
     this._rtcService.localStream.subscribe(() => {
       setTimeout(() => {
-        this._rtcService.joinSession(this.session);
+        this._rtcService.joinSession('user' + Math.random(), this.session);
       }, 1000);
     });
 

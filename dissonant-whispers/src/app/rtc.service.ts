@@ -1,21 +1,34 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { Session } from './Session';
+import { find, remove } from 'lodash';
+import * as PeerJs from 'peerjs';
+
 declare var Peer: any;
+interface PeerUser {
+  id: string;
+  name: string;
+  dataConnection: PeerJs.DataConnection;
+  mediaConnection: PeerJs.MediaConnection;
+  stream: MediaStream;
+}
+
+interface DataMessage {
+  type: 'chat' | 'user';
+  message: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class RtcService {
-  private _connection: PeerJs.Peer;
-  private _dataConnections: PeerJs.DataConnection[] = [];
-  private _mediaConnections: PeerJs.MediaConnection[] = [];
-  private _remoteStreams: MediaStream[] = [];
+  private _name: string;
+  private _connection: PeerJs;
   private _localStream: MediaStream;
+  private _users: PeerUser[] = [];
 
   localStream = new Subject<MediaStream>();
-  remoteStreams = new Subject<MediaStream[]>();
-  dataConnections = new Subject<PeerJs.DataConnection[]>();
+  users = new Subject<PeerUser[]>();
 
   constructor() {
     window.addEventListener('beforeunload', () => {
@@ -24,12 +37,13 @@ export class RtcService {
   }
 
   destroy() {
-    this._dataConnections.forEach(d => {
-      d.close();
-    });
-
-    this._mediaConnections.forEach(m => {
-      m.close();
+    this._users.forEach(user => {
+      if (user.dataConnection) {
+        user.dataConnection.close();
+      }
+      if (user.mediaConnection) {
+        user.mediaConnection.close();
+      }
     });
 
     this._connection.destroy();
@@ -43,6 +57,7 @@ export class RtcService {
   }
 
   hostSession(session: Session) {
+    this._name = 'DM';
     this._connection = new Peer(`host_${session.name}`, {
       host: session.server,
       key: 'peerjs',
@@ -59,28 +74,38 @@ export class RtcService {
     });
 
     this._connection.on('connection', dataConnection => {
-      dataConnection.on('close', function() {
-        console.log('data conn closed');
-        console.log(this);
+      this.addUser(dataConnection.peer, null, dataConnection);
+
+      const self = this;
+
+      dataConnection.on('open', () => {
+        dataConnection.send({ type: 'user', message: name } as DataMessage);
       });
-      this.addDataConnection(dataConnection);
+      dataConnection.on('close', function() {
+        self.removeUser(this.peer);
+      });
+
+      dataConnection.on('data', function(data: DataMessage) {
+        if (data.type === 'user') {
+          self.addUser(this.peer, data.message);
+        }
+      });
     });
 
     this._connection.on('call', mediaConnection => {
-      this._mediaConnections.push(mediaConnection);
       mediaConnection.answer(this._localStream);
-      mediaConnection.on('stream', stream => {
-        this.addRemoteStream(stream);
+      const self = this;
+      mediaConnection.on('stream', function(stream) {
+        self.addUser(this.peer, null, null, this, stream);
       });
 
       mediaConnection.on('close', function() {
-        console.log('media conn closed');
-        console.log(this);
+        self.removeUser(this.peer);
       });
     });
   }
 
-  joinSession(session: Session) {
+  joinSession(name: string, session: Session) {
     this._connection = new Peer(null, {
       host: session.server,
       key: 'peerjs',
@@ -92,36 +117,89 @@ export class RtcService {
       console.log(e);
     });
 
-    this.callUser(`host_${session.name}`);
+    this.callUser(`host_${session.name}`, name);
   }
 
-  callUser(userId: string) {
-    const mediaConn = this._connection.call(userId, this._localStream);
-    mediaConn.on('stream', stream => {
-      this.addRemoteStream(stream);
+  callUser(userId: string, name: string) {
+    this._name = name;
+    const mediaConn = this._connection.call(userId, this._localStream, { name });
+    const self = this;
+    mediaConn.on('stream', function(stream) {
+      self.addUser(this.peer, null, null, this, stream);
+    });
+
+    mediaConn.on('close', function() {
+      self.removeUser(this.peer);
     });
 
     const dataConn = this._connection.connect(userId);
 
-    dataConn.on('data', data => {
-      console.log(data);
+    dataConn.on('close', function() {
+      self.removeUser(this.peer);
     });
 
-    this._mediaConnections.push(mediaConn);
-    this._dataConnections.push(dataConn);
+    dataConn.on('open', () => {
+      dataConn.send({ type: 'user', message: name } as DataMessage);
+    });
+
+    dataConn.on('data', function(data: DataMessage) {
+      if (data.type === 'user') {
+        self.addUser(this.peer, data.message);
+      }
+    });
   }
 
-  private addRemoteStream(stream) {
-    if (this._remoteStreams.indexOf(stream) < 0) {
-      this._remoteStreams.push(stream);
-      this.remoteStreams.next(this._remoteStreams);
+  private addUser(
+    id: string,
+    name?: string,
+    dataConnection?: PeerJs.DataConnection,
+    mediaConnection?: PeerJs.MediaConnection,
+    stream?: MediaStream
+  ) {
+    const existingUser = find(this._users, user => {
+      return user.id === id;
+    });
+
+    if (existingUser) {
+      if (name) {
+        existingUser.name = name;
+      }
+
+      if (dataConnection) {
+        existingUser.dataConnection = dataConnection;
+      }
+
+      if (mediaConnection) {
+        existingUser.mediaConnection = mediaConnection;
+      }
+
+      if (stream) {
+        existingUser.stream = stream;
+      }
+    } else {
+      this._users.push({
+        id,
+        dataConnection,
+        mediaConnection,
+        stream,
+        name
+      });
     }
+
+    if (name) {
+      console.log(name + ' connected.');
+    }
+
+    this.users.next(this._users);
   }
 
-  private addDataConnection(dataConnection) {
-    if (this._dataConnections.indexOf(dataConnection) < 0) {
-      this._dataConnections.push(dataConnection);
-      this.dataConnections.next(this._dataConnections);
+  private removeUser(id: string) {
+    const removedUsers = remove(this._users, user => {
+      return user.id === id;
+    });
+
+    if (removedUsers.length > 0) {
+      this.users.next(this._users);
     }
   }
 }

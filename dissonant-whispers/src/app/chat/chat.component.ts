@@ -11,14 +11,13 @@ export class ChatComponent implements OnInit, AfterViewInit {
   @ViewChild('localVideoElement')
   localVideoElement: ElementRef<HTMLVideoElement>;
 
+  remoteUsers: any;
   remoteStreams: MediaStream[];
 
   constructor(private _rtcService: RtcService) {}
 
   ngOnInit() {
-    this._rtcService.remoteStreams.subscribe(remoteStreams => {
-      this.remoteStreams = remoteStreams;
-    });
+    this.remoteUsers = this._rtcService.users;
   }
 
   ngAfterViewInit() {
